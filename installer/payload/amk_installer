@@ -1,0 +1,123 @@
+#!/bin/bash
+echo "Running Installer"
+kernelrel=$(uname -r)
+kernelver=(${kernelrel//[.-]/ })
+if (( kernelver[0] < 3 ))
+then
+  echo "Kernel release: $kernelrel"
+  echo "Kernel 3.8 or higher needed"
+  exit 0
+elif (( kernelver[0] == 3 && kernelver[1] < 8 ))
+then
+  echo "Kernel release: $kernelrel"
+  echo "Kernel 3.8 or higher needed"
+  exit 0
+fi
+
+#check user.max_user_namespaces
+MAXUSERNAMESPACES=$(cat /proc/sys/user/max_user_namespaces 2>/dev/null)
+if (( ${MAXUSERNAMESPACES:-0} == 0 ))
+then
+  echo "user.max_user_namespaces = 0"
+  echo "Please run as (admin) root: "
+  echo ""
+  echo "(sudo) sysctl user.max_user_namespaces=15076 "
+  echo ""
+  echo "To enable it permanently after a reboot, as root:"
+  echo ""
+  echo "echo "user.max_user_namespaces=15076" >> /etc/sysctl.conf"
+  echo ""
+  echo "Otherwise the automekin container will not run"
+  exit 0
+fi
+
+AMKTMP="${TMPDIR-/tmp}/amk_installer-${USER}"
+mkdir -p ${AMKTMP}/bin
+tar zxf ./singularity.tgz -C ${AMKTMP}
+mkdir -p /tmp/singularity/mnt/session
+cd ${AMKTMP}/software/Singularity/3.6.2/bin
+#export SINGULARITYINSTALLDIR=${AMKTMP}/software/Singularity/3.6.2
+sed -i "s@# mksquashfs path =@mksquashfs path = ${AMKTMP}/software/Squashfs/4.3/mksquashfs@g" ${AMKTMP}/software/Singularity/3.6.2/etc/singularity/singularity.conf
+#mv $SINGULARITYINSTALLDIR/libexec/singularity/bin/starter $SINGULARITYINSTALLDIR/libexec/singularity/bin/_starter
+#cat > $SINGULARITYINSTALLDIR/libexec/singularity/bin/starter << STARTER_EOF
+##!/bin/bash
+#export SINGULARITYINSTALLDIR=$SINGULARITYINSTALLDIR
+#exec $SINGULARITYINSTALLDIR/libexec/singularity/bin/_starter "\$@"
+#STARTER_EOF
+#chmod +x $SINGULARITYINSTALLDIR/libexec/singularity/bin/starter
+cd ${AMKTMP}/bin
+#wrappers to external programs
+cat > qcore << EOF
+#!/bin/bash
+if [ -x /opt/qcore/bin/qcore ]
+then
+  export PATH=/opt/qcore/bin:\$PATH
+  exec /opt/qcore/bin/qcore "\$@"
+fi
+EOF
+chmod +x qcore
+export PATH=${AMKTMP}/software/Squashfs/4.3:${AMKTMP}/software/Singularity/3.6.2/bin:$PATH
+cd $HOME
+
+if ! singularity capability avail | grep -q CLONE_
+then 
+  echo "Unprivileged user namespace creation is not enabled";
+  echo "Check https://sylabs.io/guides/3.6/admin-guide/user_namespace.html"
+  exit 0
+fi
+
+#singularity 3.6
+#AMKREL=$(singularity search automekin | grep "Tags:" | tail -1 | awk 'BEGIN{tag=872}{if($NF>tag)tag=$NF}END{print tag}')
+#singularity 3.7
+#AMKREL=$(singularity search automekin | grep emartineznunez | grep '/automekin:' | awk 'BEGIN{FS=":";tag=872}{if($NF>tag)tag=$NF}END{print tag}')
+#sylabs upgrade, curl should be available
+AMKREL=$(curl -S https://raw.githubusercontent.com/emartineznunez/AutoMeKin/main/share/amk_build 2>/dev/null || echo 1127)
+
+SIGLIB="library://emartineznunez/default/automekin:$AMKREL"
+SIF=$HOME/automekin_${AMKREL}.sif
+if [ ! -f $SIF ]
+then
+   singularity pull --arch amd64 $SIF $SIGLIB
+   echo "Verifying ..."
+   if (( AMKREL <= 980 ))
+     then
+       #container signed with singularity version < 3.6
+       singularity verify --legacy-insecure $SIF
+     else
+       singularity verify $SIF
+   fi
+fi
+
+AMK_INSTANCE=${AMK_INSTANCE:-automekin_$AMKREL}
+
+export SINGULARITYENV_containername=$AMK_INSTANCE
+
+BIND_MOUNT="--bind ${TMPDIR-/tmp}"
+
+if G09DIR=$(dirname $(which g09 2> /dev/null) 2> /dev/null)
+then
+  export SINGULARITYENV_amkinterfaces="(g09)"
+  export SINGULARITYENV_PREPEND_PATH=/opt/g09
+  if [ -d $GAUSS_SCRDIR ]
+    then
+      export SINGULARITYENV_GAUSS_SCRDIR=/scratch
+      BIND_MOUNT="$BIND_MOUNT --bind $G09DIR:/opt/g09 --bind $GAUSS_SCRDIR:/scratch"
+    else
+      BIND_MOUNT="$BIND_MOUNT --bind $G09DIR:/opt/g09"
+  fi
+else
+  echo -e "\e[91mg09 does not seem to be installed in this computer.\e[0m"
+fi
+
+if QCOREDIR=$(dirname $(dirname $(which qcore 2> /dev/null) 2> /dev/null) 2> /dev/null)
+then
+  export SINGULARITYENV_amkinterfaces="$SINGULARITYENV_amkinterfaces (qcore)"
+  BIND_MOUNT="$BIND_MOUNT --bind $QCOREDIR:/opt/qcore"
+  BIND_MOUNT="$BIND_MOUNT --bind ${AMKTMP}/bin/qcore:/usr/local/bin/qcore"
+else
+  echo -e "\e[91mqcore does not seem to be installed in this computer.\e[0m"
+fi
+
+singularity instance start $BIND_MOUNT $SIF $AMK_INSTANCE
+
+singularity run instance://$AMK_INSTANCE

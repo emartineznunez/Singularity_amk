@@ -1,0 +1,91 @@
+#!/bin/bash
+echo ""
+echo "AutoMeKin"
+echo "https://rxnkin.usc.es/index.php/AutoMeKin"
+echo "Self Extracting Installer"
+echo ""
+
+AMKTMP="${TMPDIR-/tmp}/amk_installer-${USER}"
+if [ -f ${AMKTMP}/software/Singularity/3.6.2/bin/singularity -a -f ${AMKTMP}/software/Singularity/3.6.2/bin/jq ]
+then
+#  export SINGULARITYINSTALLDIR=${AMKTMP}/software/Singularity/3.6.2
+  export PATH=${AMKTMP}/software/Squashfs/4.3:${AMKTMP}/software/Singularity/3.6.2/bin:$PATH
+  #singularity 3.6
+  #AMKREL=$(singularity search automekin | grep "Tags:" | tail -1 | awk 'BEGIN{tag=872}{if($NF>tag)tag=$NF}END{print tag}')
+  #singularity 3.7
+  #AMKREL=$(singularity search automekin | grep emartineznunez | grep '/automekin:' | awk 'BEGIN{FS=":";tag=872}{if($NF>tag)tag=$NF}END{print tag}')
+  #sylabs upgrade, curl should be available
+  AMKREL=$(curl -S https://raw.githubusercontent.com/emartineznunez/AutoMeKin/main/share/amk_build 2>/dev/null || echo 1132)
+  AMK_INSTANCE=${AMK_INSTANCE:-automekin_$AMKREL}
+  export AMK_INSTANCE
+  if [ "$1" = "stop" ]
+  then
+    img=$(singularity instance list -j | jq -r '.instances[]  | select(.instance == env.AMK_INSTANCE) | .img')
+    if [ -n "$img" ]
+    then
+      todelete=$(dirname $img)
+      singularity instance stop -t 30 $AMK_INSTANCE
+      # sometimes a Timeout happens ...
+      if [ -f $todelete/amk_installer ]
+      then
+        rm -rf $todelete
+      fi
+    fi
+    exit 0
+  fi
+  check_inst=$(singularity instance list -j | jq -r '.instances[]  | select(.instance == env.AMK_INSTANCE) | .instance == env.AMK_INSTANCE')
+  check_inst=${check_inst:-false}
+  if [ "$check_inst" = "true" ]
+  then
+    ROOTFS=$(singularity instance list -j | jq -r '.instances[]  | select(.instance == env.AMK_INSTANCE) | .img')
+    export SINGULARITYENV_containername=$AMK_INSTANCE
+    if G09DIR=$(dirname $(which g09 2> /dev/null) 2> /dev/null)
+      then
+      export SINGULARITYENV_amkinterfaces="(g09)"
+      export SINGULARITYENV_PREPEND_PATH=/opt/g09
+      if [ -d $GAUSS_SCRDIR ]
+       then
+       export SINGULARITYENV_GAUSS_SCRDIR=/scratch
+      fi
+      if [ ! -d $ROOTFS/opt/g09 ]
+        then
+        echo -e "\e[91m[WARNING]\e[0m: g09 has been detected but the running amk instance have started without it"
+        echo "g09 will not be functional, please consider exit and run: ${0} stop;${0}"
+      fi
+    else
+      echo -e "\e[91mg09 does not seem to be installed in this computer.\e[0m"
+    fi
+
+    if QCOREDIR=$(dirname $(dirname $(which qcore 2> /dev/null) 2> /dev/null) 2> /dev/null)
+      then
+      export SINGULARITYENV_amkinterfaces="$SINGULARITYENV_amkinterfaces (qcore)"
+      if [ ! -d $ROOTFS/opt/qcore ]
+        then
+        echo -e "\e[91m[WARNING]\e[0m: qcore has been detected but the running amk instance have started without it"
+        echo "qcore will not be functional, please consider exit and run: ${0} stop;${0}"
+      fi
+    else
+      echo -e "\e[91mqcore does not seem to be installed in this computer.\e[0m"
+    fi
+
+    singularity run instance://$AMK_INSTANCE
+    exit 0
+  fi
+fi
+
+export AMKEXTRACT=`mktemp -d -t selfextract.XXXXXX`
+
+ARCHIVE=`awk '/^__ARCHIVE_BELOW__/ {print NR + 1; exit 0; }' $0`
+
+tail -n+$ARCHIVE $0 | tar xz -C $AMKEXTRACT
+
+CDIR=`pwd`
+cd $AMKEXTRACT
+./amk_installer $*
+
+cd $CDIR
+rm -rf $AMKEXTRACT
+
+exit 0
+
+__ARCHIVE_BELOW__
