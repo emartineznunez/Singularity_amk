@@ -1,0 +1,86 @@
+BootStrap: library
+From: centos:7
+
+%post
+    yum -y install epel-release
+    yum -y update
+    yum -y install redhat-lsb yum-utils git make automake libtool autoconf bc which environment-modules gawk gcc gcc-c++ gnuplot gcc-gfortran parallel sqlite zenity vim-common vim-minimal vim-enhanced vim-filesystem python3-pip openblas xurl
+    update-mime-database /usr/share/mime
+    curl -sL https://rpm.nodesource.com/setup_14.x | bash -
+    yum -y install nodejs
+    python3 -m pip install --upgrade pip
+    python3 -m pip install --upgrade Pillow
+    pip3 install ase
+    pip3 install networkx
+    mkdir /install_dir
+    cd /install_dir
+    curl -O https://rxnkin.usc.es/images/1/1a/amk-SOURCE-2021.tar.gz
+    tar zxvf amk-SOURCE-2021.tar.gz
+    cd amk-SOURCE-2021
+    ./configure --prefix=/opt/AutoMeKin
+    make
+    make install
+    rm -f /opt/AutoMeKin/modules/amk/2021ft2
+    cd /install_dir
+    curl -O https://rxnkin.usc.es/images/5/56/molden6.2.full.ubuntu.64.tar.gz
+    cd /opt
+    tar zxvf /install_dir/molden6.2.full.ubuntu.64.tar.gz
+    git clone https://github.com/dgarayr/amk_tools.git
+    cd amk_tools
+    pip3 install -e .
+    cd scripts
+    chmod +x amk_gen_view.py
+    cd /
+    cat > /etc/profile.d/zzz-AutoMeKinsetup.sh  << EOF
+#
+export MODULEPATH=/opt/AutoMeKin/modules:\$MODULEPATH
+export PATH=/opt/molden:/opt/amk_tools/scripts:\$PATH
+module load amk/2021
+EOF
+    cat > /getAutoMeKinshell.sh << EOF
+#!/bin/bash
+source /etc/profile.d/modules.sh
+export MODULEPATH=/opt/AutoMeKin/modules:\$MODULEPATH
+export PATH=/opt/molden:/opt/amk_tools/scripts:\$PATH
+amk_prompt () {
+    if [ $? -eq 0 ]; then # set an error string for the prompt, if applicable
+        ERRPROMPT=" "
+    else
+        ERRPROMPT='->(\$?) '
+    fi
+    GREEN="\[\033[0;32m\]"
+    CYAN="\[\033[0;36m\]"
+    BCYAN="\[\033[1;36m\]"
+    BLUE="\[\033[0;34m\]"
+    GRAY="\[\033[0;37m\]"
+    DKGRAY="\[\033[1;30m\]"
+    WHITE="\[\033[1;37m\]"
+    RED="\[\033[0;31m\]"
+    # return color to Terminal setting for text color
+    DEFAULT="\[\033[0;39m\]"
+    export PS1="\${CYAN}[ \${GREEN}\${containername} \${amkinterfaces}\${DKGRAY} \$(date +%k:%M:%S) \${CYAN}]\${RED}\$ERRPROMPT${GRAY}\w\n\${DEFAULT}$ "
+}
+export -f amk_prompt 
+export LANG=C
+export PROMPT_COMMAND=amk_prompt
+echo "AutoMeKin 2021 (https://rxnkin.usc.es/index.php/AutoMeKin)"
+echo "MOLDEN 6.2: molden"
+echo "Gnuplot 4.6: gnuplot"
+module load amk/2021
+#G09 setup based on a bind in /opt
+if [ -f /opt/g09/bsd/g09.profile ]
+  then
+  export g09root=/opt
+  source /opt/g09/bsd/g09.profile
+fi
+export XDG_RUNTIME_DIR=\$(mktemp --tmpdir -d \$(id -u)-XXXXXX)
+/bin/bash --noprofile --norc
+EOF
+    chmod +x /getAutoMeKinshell.sh
+    rm -rf /install_dir
+
+%runscript
+    /getAutoMeKinshell.sh
+
+%labels
+    Author emartineznunez
