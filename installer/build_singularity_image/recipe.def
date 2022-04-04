@@ -73,6 +73,13 @@ if [ -f /opt/g09/bsd/g09.profile ]
   export g09root=/opt
   source /opt/g09/bsd/g09.profile
 fi
+#G16 setup based on a bind in /opt
+if [ -f /opt/g16/bsd/g16.profile ]
+  then
+  export g16root=/opt
+  source /opt/g16/bsd/g16.profile
+fi
+
 export XDG_RUNTIME_DIR=\$(mktemp --tmpdir -d \$(id -u)-XXXXXX)
 /bin/bash --noprofile --norc
 EOF
