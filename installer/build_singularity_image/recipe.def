@@ -4,7 +4,7 @@ From: centos:7
 %post
     yum -y install epel-release
     yum -y update
-    yum -y install redhat-lsb yum-utils git make automake libtool autoconf bc which environment-modules gawk gcc gcc-c++ gnuplot gcc-gfortran parallel sqlite zenity vim-common vim-minimal vim-enhanced vim-filesystem python3-pip openblas xurl
+    yum -y install redhat-lsb yum-utils git make automake libtool autoconf bc which environment-modules gawk gcc gcc-c++ gnuplot gcc-gfortran parallel sqlite zenity vim-common vim-minimal vim-enhanced vim-filesystem python3-pip openblas curl
     update-mime-database /usr/share/mime
     curl -sL https://rpm.nodesource.com/setup_14.x | bash -
     yum -y install nodejs
