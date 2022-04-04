@@ -55,6 +55,23 @@ then
     else
       echo -e "\e[91mg09 does not seem to be installed in this computer.\e[0m"
     fi
+    
+    if G16DIR=$(dirname $(which g16 2> /dev/null) 2> /dev/null)
+       then
+       export SINGULARITYENV_amkinterfaces="(g16)"
+       export SINGULARITYENV_PREPEND_PATH=/opt/g16
+       if [ -d $GAUSS_SCRDIR ]
+        then
+        export SINGULARITYENV_GAUSS_SCRDIR=/scratch
+       fi
+       if [ ! -d $ROOTFS/opt/g16 ]
+         then
+         echo -e "\e[91m[WARNING]\e[0m: g16 has been detected but the running amk instance have started without it"
+         echo "g16 will not be functional, please consider exit and run: ${0} stop;${0}"
+       fi
+    else
+      echo -e "\e[91mg16 does not seem to be installed in this computer.\e[0m"
+    fi
 
     if QCOREDIR=$(dirname $(dirname $(which qcore 2> /dev/null) 2> /dev/null) 2> /dev/null)
       then
