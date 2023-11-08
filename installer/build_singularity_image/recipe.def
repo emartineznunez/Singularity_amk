@@ -4,19 +4,19 @@ From: centos:7
 %post
     yum -y install epel-release
     yum -y update
-    yum -y install redhat-lsb yum-utils git make automake libtool autoconf bc which environment-modules gawk gcc gcc-c++ gnuplot gcc-gfortran parallel sqlite zenity vim-common vim-minimal vim-enhanced vim-filesystem python3-pip openblas curl
+    yum -y install redhat-lsb yum-utils git make automake libtool autoconf bc which environment-modules gawk gcc gcc-c++ gnuplot gcc-gfortran parallel sqlite zenity vim-common vim-minimal vim-enhanced vim-filesystem python3-pip openblas curl glibc
     update-mime-database /usr/share/mime
-    curl -sL https://rpm.nodesource.com/setup_14.x | bash -
-    yum -y install nodejs
+    yum install --skip-broken https://rpm.nodesource.com/pub_20.x/nodistro/repo/nodesource-release-nodistro-1.noarch.rpm -y
+    yum install nodejs -y --setopt=nodesource-nodejs.module_hotfixes=1
     python3 -m pip install --upgrade pip
     python3 -m pip install --upgrade Pillow
     pip3 install ase
     pip3 install networkx
     mkdir /install_dir
     cd /install_dir
-    curl -O https://rxnkin.usc.es/images/1/1a/amk-SOURCE-2021.tar.gz
-    tar zxvf amk-SOURCE-2021.tar.gz
-    cd amk-SOURCE-2021
+    git clone https://github.com/emartineznunez/AutoMeKin.git
+    cd AutoMeKin
+    autoreconf -i
     ./configure --prefix=/opt/AutoMeKin
     make
     make install
