@@ -64,7 +64,6 @@ export LANG=C
 export PROMPT_COMMAND=amk_prompt
 echo "AutoMeKin 2021 (https://github.com/emartineznunez/AutoMeKin)"
 echo "MOLDEN 6.2: molden"
-echo "Gnuplot 4.6: gnuplot"
 module load amk/2021
 #G09 setup based on a bind in /opt
 if [ -f /opt/g09/bsd/g09.profile ]
