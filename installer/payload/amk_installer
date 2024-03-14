@@ -71,7 +71,8 @@ fi
 #singularity 3.7
 #AMKREL=$(singularity search automekin | grep emartineznunez | grep '/automekin:' | awk 'BEGIN{FS=":";tag=872}{if($NF>tag)tag=$NF}END{print tag}')
 #sylabs upgrade, curl should be available
-AMKREL=$(curl -S https://raw.githubusercontent.com/emartineznunez/AutoMeKin/main/share/amk_build 2>/dev/null || echo 1127)
+#AMKREL=$(curl -S https://raw.githubusercontent.com/emartineznunez/AutoMeKin/main/share/amk_build 2>/dev/null || echo 1127)
+AMKREL=$(curl -S https://raw.githubusercontent.com/emartineznunez/Singularity_amk/main/installer/amk_build 2>/dev/null || echo 1137)
 
 SIGLIB="library://emartineznunez/default/automekin:$AMKREL"
 SIF=$HOME/automekin_${AMKREL}.sif

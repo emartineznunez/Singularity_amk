@@ -15,7 +15,8 @@ then
   #singularity 3.7
   #AMKREL=$(singularity search automekin | grep emartineznunez | grep '/automekin:' | awk 'BEGIN{FS=":";tag=872}{if($NF>tag)tag=$NF}END{print tag}')
   #sylabs upgrade, curl should be available
-  AMKREL=$(curl -S https://raw.githubusercontent.com/emartineznunez/AutoMeKin/main/share/amk_build 2>/dev/null || echo 1132)
+  #AMKREL=$(curl -S https://raw.githubusercontent.com/emartineznunez/AutoMeKin/main/share/amk_build 2>/dev/null || echo 1132)
+  AMKREL=$(curl -S https://raw.githubusercontent.com/emartineznunez/Singularity_amk/main/installer/amk_build 2>/dev/null || echo 1137)
   AMK_INSTANCE=${AMK_INSTANCE:-automekin_$AMKREL}
   export AMK_INSTANCE
   if [ "$1" = "stop" ]
