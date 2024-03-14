@@ -29,7 +29,7 @@ From: centos:7
     cd amk_tools
     pip3 install -e .
     cd scripts
-    chmod +x amk_gen_view.py
+    chmod +x amk_gen_view.py amk_rxn_stats.py
     cd /
     cat > /etc/profile.d/zzz-AutoMeKinsetup.sh  << EOF
 #
